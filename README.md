@@ -1,3 +1,5 @@
+Topics Covered
+---------------
 
 - [Trees](#trees)
   - [Dynamic Programming](#dynamic-programming)

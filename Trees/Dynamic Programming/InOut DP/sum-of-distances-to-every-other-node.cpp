@@ -1,9 +1,9 @@
 /**
- * Given a tree, for each node, output the distance to the node farthest from
- * it.
+ * Given a tree, for each node, find the sum of distances to every other node,
+ * in linear time.
  *
  * Example: 1->2, 1->3
- * Output: 1 2 2
+ * Output: 2 3 3
  *
  * Ref: https://blogarithms.github.io/articles/2019-10/inout-dp-tree
  **/
@@ -41,10 +41,12 @@ class Tree {
 // Initialize static variables.
 std::map<int64_t, Node*> Tree::nodes;
 
+const int64_t NUM = 19;
+
 // Creating an n-ary tree as given in the above link.
 Node* Tree::createTree() {
     // create all nodes first;
-    for (int64_t i = 1; i <= 19; i++) nodes[i] = new Node(i);
+    for (int64_t i = 1; i <= NUM; i++) nodes[i] = new Node(i);
 
     // 1's children are 2, 3, 4
     addChildren(1, 3, 2, 3, 4);
@@ -74,34 +76,38 @@ Node* Tree::createTree() {
     return nodes[1];
 };
 
-const int64_t NUM = 21;
-std::vector<int64_t> IN(NUM, 0), OUT(NUM, 0);
+std::vector<int64_t> IN(NUM + 1, 0);
+std::vector<int64_t> OUT(NUM + 1, 0);
+std::vector<int64_t> NUM_CHILDREN(NUM + 1, 0);
 
 void calculateIN(Node* root) {
-    int64_t ans = 0;
     for (auto child : root->children) {
         calculateIN(child);
-        ans = std::max(ans, IN[child->data] + 1);
+        NUM_CHILDREN[root->data] += 1 + NUM_CHILDREN[child->data];
+        IN[root->data] += 1 + NUM_CHILDREN[child->data] + IN[child->data];
     }
-
-    IN[root->data] = ans;
 }
 
-// Calculated using my parent's OUT and my siblings IN, along with some
-// modifications as per question requirement.
-// OUT of actual root is always 0.
 void calculateOUT(Node* root) {
-    int64_t max1 = -1, max2 = -1;
     for (auto child : root->children) {
-        if (IN[child->data] > max1)
-            max2 = max1, max1 = IN[child->data];
-        else if (IN[child->data] > max2)
-            max2 = IN[child->data];
-    }
+        auto nodesIncludingMeAndMyChildren = NUM_CHILDREN[child->data] + 1;
+        auto nodesExcludingMeAndMyChildren =
+            NUM - NUM_CHILDREN[child->data] - 1;
 
-    for (auto child : root->children) {
-        auto siblingMax = IN[child->data] == max1 ? max2 : max1;
-        OUT[child->data] = std::max(1 + OUT[root->data], 2 + siblingMax);
+        // Need to add "excluding" coz distance of all nodes from parent will
+        // increase by 1.
+        OUT[child->data] =
+            nodesExcludingMeAndMyChildren + OUT[root->data] + IN[root->data];
+
+        // You have also included my subtree. So, cancel it.
+        OUT[child->data] -= IN[child->data];
+
+        // But now distance of each node of my subtree from my parent remains
+        // intact. Kindly subtract that as well. You alredy know how many nodes
+        // are there in my subtree. ;)
+        OUT[child->data] -= nodesIncludingMeAndMyChildren;
+
+        // Oh, don't forget to recur on me.
         calculateOUT(child);
     }
 }
@@ -109,15 +115,11 @@ void calculateOUT(Node* root) {
 int main() {
     Node* root = Tree::createTree();
 
-    // Calculate IN dp. It represents the max height possible in my subtree.
     calculateIN(root);
-
-    // Calculate OUT dp. It represents the max height possible outside of the
-    // scope of my subtree.
     calculateOUT(root);
 
-    // Calculate ans of all nodes.
-    for (int i = 1; i <= 19; i++) std::cout << std::max(IN[i], OUT[i]) << " ";
+    // IN + OUT will give you the answer.
+    for (int i = 1; i <= NUM; i++) std::cout << IN[i] + OUT[i] << " ";
 
     std::cout << std::endl;
 
